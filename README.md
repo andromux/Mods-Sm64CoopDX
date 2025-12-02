@@ -3,16 +3,6 @@ Como encriptar tus mods, para complicar su propia modificaciòn no autorizada. p
 
 ### Guía Completa: Protección de Mods Lua para SM64 Coop Deluxe
 
-## 📋 Índice
-1. [Requisitos previos](#requisitos)
-2. [Método Simple: Compilación a Bytecode](#metodo-simple)
-3. [Método Avanzado: Ofuscación + Bytecode](#metodo-avanzado)
-4. [Uso en Termux (Android)](#termux)
-5. [Recomendaciones de seguridad](#recomendaciones)
-6. [Solución de problemas](#problemas)
-
----
-
 ## 🔧 Requisitos Previos {#requisitos}
 
 ### Verificar instalación de Lua 5.3
