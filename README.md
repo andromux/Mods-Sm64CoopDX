@@ -3,7 +3,7 @@ Como encriptar tus mods, para complicar su propia modificaciòn no autorizada. p
 
 ### Guía Completa: Protección de Mods Lua para SM64 Coop Deluxe
 
-## 🔧 Requisitos Previos {#requisitos}
+## 🔧 Requisitos Previos
 
 ### Verificar instalación de Lua 5.3
 
@@ -95,7 +95,6 @@ luac -l mi_mod.luac
 ```bash
 # Estructura de carpetas de un mod
 mi_mod/
-├── main.lua           # ← Reemplazar con main.luac
 ├── actor-utils.lua    # ← Reemplazar con actor-utils.luac
 └── ...
 ```
@@ -104,11 +103,10 @@ mi_mod/
 ```bash
 # Compilar todos los .lua de tu mod
 cd ~/sm64coopdx/mods/mi_mod/
-luac -s -o main.luac main.lua
 luac -s -o actor-utils.luac actor-utils.lua
 
 # Opcional: Eliminar los .lua originales
-rm main.lua actor-utils.lua
+rm actor-utils.lua
 ```
 
 ### Script automatizado (Método Simple)
@@ -138,7 +136,7 @@ find . -name "*.lua" -type f | while read archivo; do
 done
 
 echo ""
-echo "✨ Compilación completada"
+echo "Compilación completada"
 ```
 
 **Uso:**
@@ -523,7 +521,7 @@ luac -s -o main.luac main_ofuscado.lua
 
 ---
 
-## Solución de Problemas {#problemas}
+## Solución de Problemas
 
 ### Error: "Lua versions don't match"
 
