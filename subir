@@ -1,69 +1,156 @@
 #!/bin/bash
-
-# Script simple de Git para subir cambios automáticamente
-# Uso: ./subir [mensaje] [--force]
+# Script de Git para subir cambios con selección de rama
+# Uso: ./subir [mensaje] [rama] [--force]
 
 # Colores
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Mensaje por defecto
+# Variables por defecto
 COMMIT_MESSAGE="CAMBIOS APP"
+BRANCH="main"
 USE_FORCE=false
 
 # Procesar argumentos
-if [[ $# -eq 1 ]]; then
-    if [[ "$1" == "--force" ]]; then
-        USE_FORCE=true
-    else
-        COMMIT_MESSAGE="$1"
-    fi
-elif [[ $# -eq 2 ]]; then
-    COMMIT_MESSAGE="$1"
-    if [[ "$2" == "--force" ]]; then
-        USE_FORCE=true
-    fi
-fi
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --force|-f)
+            USE_FORCE=true
+            shift
+            ;;
+        --branch|-b)
+            BRANCH="$2"
+            shift 2
+            ;;
+        *)
+            if [[ -z "$CUSTOM_MESSAGE_SET" ]]; then
+                COMMIT_MESSAGE="$1"
+                CUSTOM_MESSAGE_SET=true
+            fi
+            shift
+            ;;
+    esac
+done
 
-echo -e "${YELLOW}Subiendo cambios a GitHub...${NC}"
-echo "Mensaje: $COMMIT_MESSAGE"
+echo -e "${BLUE}================================${NC}"
+echo -e "${YELLOW}🚀 Subiendo cambios a GitHub${NC}"
+echo -e "${BLUE}================================${NC}"
 
 # Verificar si estamos en un repo git
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    echo -e "${RED}Error: No estás en un repositorio Git${NC}"
-    exit 1
+   echo -e "${RED}❌ Error: No estás en un repositorio Git${NC}"
+   exit 1
 fi
 
-# Git add
-echo -e "${YELLOW}Añadiendo archivos...${NC}"
-git add .
+# Mostrar rama actual
+CURRENT_BRANCH=$(git branch --show-current)
+echo -e "${BLUE}Rama actual:${NC} $CURRENT_BRANCH"
 
-# Git commit
-echo -e "${YELLOW}Creando commit...${NC}"
-git commit -m "$COMMIT_MESSAGE"
+# Preguntar si quiere cambiar de rama
+echo -e "\n${YELLOW}¿A qué rama quieres subir?${NC}"
+echo "1) main (por defecto)"
+echo "2) mods-coop"
+echo "3) Otra rama (especificar)"
+echo "4) Quedarse en rama actual ($CURRENT_BRANCH)"
+read -p "Opción [1]: " BRANCH_OPTION
 
-# Asegurar rama main
-echo -e "${YELLOW}Configurando rama main...${NC}"
-git branch -M main
+case $BRANCH_OPTION in
+    2)
+        BRANCH="mods-coop"
+        ;;
+    3)
+        read -p "Nombre de la rama: " BRANCH
+        ;;
+    4)
+        BRANCH="$CURRENT_BRANCH"
+        ;;
+    *)
+        BRANCH="main"
+        ;;
+esac
 
-# Git push
-echo -e "${YELLOW}Subiendo a GitHub...${NC}"
-if [[ "$USE_FORCE" == true ]]; then
-    echo -e "${YELLOW}Usando push forzado...${NC}"
-    git push --force origin main
-else
-    # Intentar push normal primero
-    if ! git push origin main 2>/dev/null; then
-        echo -e "${YELLOW}Push normal falló, usando push forzado...${NC}"
-        git push --force origin main
+echo -e "\n${BLUE}Rama destino:${NC} $BRANCH"
+
+# Cambiar a la rama si es necesario
+if [[ "$CURRENT_BRANCH" != "$BRANCH" ]]; then
+    echo -e "${YELLOW}Cambiando a rama $BRANCH...${NC}"
+    
+    # Intentar cambiar a la rama, crearla si no existe
+    if git checkout "$BRANCH" 2>/dev/null; then
+        echo -e "${GREEN}✓ Cambiado a rama existente${NC}"
+    else
+        echo -e "${YELLOW}Creando nueva rama $BRANCH...${NC}"
+        git checkout -b "$BRANCH"
     fi
 fi
 
-if [[ $? -eq 0 ]]; then
-    echo -e "${GREEN}✅ Cambios subidos exitosamente!${NC}"
+# Mostrar estado
+echo -e "\n${YELLOW}Estado del repositorio:${NC}"
+git status --short
+
+# Confirmar cambios
+read -p "¿Continuar con estos cambios? [S/n]: " CONFIRM
+if [[ "$CONFIRM" =~ ^[Nn] ]]; then
+    echo -e "${RED}Operación cancelada${NC}"
+    exit 0
+fi
+
+# Pedir mensaje de commit si no se proporcionó
+if [[ "$COMMIT_MESSAGE" == "CAMBIOS APP" ]]; then
+    read -p "Mensaje del commit [CAMBIOS APP]: " USER_MESSAGE
+    if [[ -n "$USER_MESSAGE" ]]; then
+        COMMIT_MESSAGE="$USER_MESSAGE"
+    fi
+fi
+
+echo -e "\n${BLUE}Mensaje:${NC} $COMMIT_MESSAGE"
+
+# Git add
+echo -e "\n${YELLOW}📦 Añadiendo archivos...${NC}"
+git add .
+
+# Git commit
+echo -e "${YELLOW}💾 Creando commit...${NC}"
+if git commit -m "$COMMIT_MESSAGE"; then
+    echo -e "${GREEN}✓ Commit creado${NC}"
 else
+    echo -e "${YELLOW}⚠ No hay cambios para commitear${NC}"
+fi
+
+# Git push
+echo -e "\n${YELLOW}☁️  Subiendo a GitHub...${NC}"
+
+PUSH_CMD="git push origin $BRANCH"
+
+# Si es la primera vez que se sube esta rama
+if ! git rev-parse --verify "origin/$BRANCH" > /dev/null 2>&1; then
+    echo -e "${YELLOW}Primera vez subiendo esta rama, configurando upstream...${NC}"
+    PUSH_CMD="git push -u origin $BRANCH"
+fi
+
+if [[ "$USE_FORCE" == true ]]; then
+    echo -e "${YELLOW}⚠️  Usando push forzado...${NC}"
+    PUSH_CMD="$PUSH_CMD --force"
+fi
+
+# Ejecutar push
+if eval $PUSH_CMD; then
+    echo -e "\n${GREEN}================================${NC}"
+    echo -e "${GREEN}✅ ¡Cambios subidos exitosamente!${NC}"
+    echo -e "${GREEN}================================${NC}"
+    echo -e "${BLUE}Rama:${NC} $BRANCH"
+    echo -e "${BLUE}URL:${NC} https://github.com/$(git remote get-url origin | sed 's/.*://;s/.git$//')}/tree/$BRANCH"
+else
+    echo -e "\n${RED}================================${NC}"
     echo -e "${RED}❌ Error al subir cambios${NC}"
+    echo -e "${RED}================================${NC}"
+    
+    # Sugerir usar force si falló
+    if [[ "$USE_FORCE" == false ]]; then
+        echo -e "${YELLOW}Intenta con:${NC} ./subir --force"
+    fi
     exit 1
 fi
